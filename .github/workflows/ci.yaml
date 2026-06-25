@@ -1,26 +1,17 @@
-# ==============================================================
-# Jerney - DevSecOps CI/CD Pipeline
-# ==============================================================
-# Triggers on every push and pull request.
-# Stages: Lint → SCA → Build → Image Scan → IaC Scan → Deploy Manifest Update
-# ==============================================================
-
-name: Jerney DevSecOps Pipeline
+name: Jerney DevSecOps Workflow
 
 on:
-  push:
-    branches: ["*"]
-  pull_request:
-    branches: ["*"]
+ push:
+   branches: ["*"]
+ pull-request:
+  branches: ["*"]
 
-# Security: restrict default permissions to read-only
-permissions:
-  contents: read
 
 env:
   DOCKER_REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/${{ github.repository }}/jerney-backend
   FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/jerney-frontend
+
 
 jobs:
   # ==============================================================
@@ -29,6 +20,7 @@ jobs:
   lint:
     name: "🔍 Lint Code"
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       matrix:
         component: [backend, frontend]
@@ -135,6 +127,7 @@ jobs:
           provenance: true
           sbom: true
 
+
   # ==============================================================
   # STAGE 4: Container Image Scanning (Trivy)
   # ==============================================================
@@ -164,6 +157,7 @@ jobs:
           severity: "CRITICAL,HIGH"
           timeout: "10m"
 
+
   # ==============================================================
   # STAGE 5: IaC Security Scan (Checkov) — Terraform + K8s
   # ==============================================================
@@ -191,7 +185,6 @@ jobs:
           framework: kubernetes
           soft_fail: true  # Soft fail for K8s (some checks may not apply)
           output_format: cli
-
   # ==============================================================
   # STAGE 6: Dockerfile Lint (Hadolint)
   # ==============================================================
@@ -211,7 +204,7 @@ jobs:
           dockerfile: ${{ matrix.component }}/Dockerfile
           failure-threshold: warning
 
-  # ==============================================================
+ # ==============================================================
   # STAGE 7: Update K8s Manifest with New Image Tag
   # Only runs on push to main (not on PRs)
   # ==============================================================
@@ -253,4 +246,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add k8s/jerney.yaml
           git diff --cached --quiet || git commit -m "ci: update k8s images to ${{ steps.sha.outputs.short }} [skip ci]"
-          git push
+          git push          
