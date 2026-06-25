@@ -3,7 +3,7 @@ name: Jerney DevSecOps Workflow
 on:
  push:
    branches: ["*"]
- pull-request:
+ pull_request:
   branches: ["*"]
 
 
